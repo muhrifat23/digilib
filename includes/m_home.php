@@ -10,32 +10,105 @@
 	$db=new MySQL();
 	$db->connect();
 	$db->execute("SELECT b.kodeBuku, b.judul, p1.nama, p2.nama, b.tahun, b.edisi, b.issn_isbn, 
-		b.seri, b.abstraksi, k.namaKategori
+		b.seri, b.abstraksi, k.namaKategori, b.image
 		FROM tb_buku b, tb_penerbit p1, tb_pengarang p2, tb_kategori k
 		WHERE b.kodePenerbit = p1.kodePenerbit
 		AND b.kodePengarang = p2.kodePengarang
 		AND b.kodeKategori = k.kodeKategori
 		limit $posisi, $batas"); 
 	$data=$db->get_dataset();
+
+	// QUERY SEARCH
+	if (isset($_POST['search'])) {
+		// Jika terdapat kiriman POST "search", maka ..
+		$batas=10;	
+		if(empty($_GET["hal"])){
+		// Jika tidak ada GET[Halaman], maka ..
+		// PAGINATION: hal untuk halaman yang sedang berjalan, posisi untuk starting data pada halaman yang berjalan
+			$posisi=0;
+			$hal=1;
+		}else{
+			$hal=$_GET["hal"];
+			$posisi=($hal-1)*$batas;
+	}
+	
+
+		$db=new MySQL();
+		$db->connect();
+
+        $search_query = $_POST['search'];
+		$db->execute("SELECT b.kodeBuku, b.judul, p1.nama AS nama_penerbit, p2.nama AS nama_pengarang, 
+              b.tahun, b.edisi, b.issn_isbn, b.seri, b.abstraksi, k.namaKategori,  b.image
+              FROM tb_buku b
+              JOIN tb_penerbit p1 ON b.kodePenerbit = p1.kodePenerbit
+              JOIN tb_pengarang p2 ON b.kodePengarang = p2.kodePengarang
+              JOIN tb_kategori k ON b.kodeKategori = k.kodeKategori
+              WHERE b.judul LIKE '%$search_query%'
+              LIMIT $posisi, $batas"); 
+			//   Mengambil data dari kolom-kolom tersebut, dimana baris judul buku mirip dengan value "search"
+
+		$data_search=$db->get_dataset();
+		} else {
+			$data_search = [];
+	}
 ?>
 
 <div class="row-fluid">
 	<h2 class="title title-large">Daftar Buku</h2>
-	<hr />
-	 <?php for($i=0; $i<count($data); $i++) { ?>
-		<div class="span3 center">
-			<p><img src="<?=$data[$i][10]?>" class="img-polaroid" style="width:200px; height:200px;"></p>
-			<p class="title"><?=$data[$i][1]?></p>
-			<p class="title title-small">( <?=$data[$i][3]?> )</p>
-			<p>
-				<a href="#modalDetail<?=$i?>" role="button" class="btn btn- btn-inverse btn-small" data-toggle="modal">
-					<i class="icon-zoom-in icon-white"></i> Detail
-				</a>
-			</p>
+
+
+	<!-- DAFTAR DATA BUKU YANG DITAMPILKAN -->
+
+	<?php if(isset($_POST['search']) && !empty($data_search)):?>
+			<!-- Jika value dari $data search bukan NULL dan ada isinya, maka // -->
+		<hr />
+		
+		<div class="container-fluid">
+			<?php for($i = 0; $i < count($data_search); $i++) { ?>
+				<!-- Looping Pengambilan Data Buku -->
+				<div class="span3 center">
+					<p><img src="<?= ($data_search[$i][10])?>" class="img-polaroid" style="width:200px; height:200px;"></p>
+					<p class="title"><?= $data_search[$i][1] ?></p>
+					<p class="title title-small">( <?= $data_search[$i][3] ?> )</p>
+					<p>
+						<a href="#modalDetail<?= $i ?>" role="button" class="btn btn- btn-inverse btn-small" data-toggle="modal">
+							<i class="icon-zoom-in icon-white"></i> Detail
+						</a>
+					</p>
+				</div>
+			<?php } ?>
 		</div>
-	  <?php } ?>
-</div>
-<hr />
+		<hr />
+
+		<?php elseif(isset($_POST['search']) && empty($data_search)): ?>
+			<!-- Jika kolom search terisi, tapi data buku tidak ditemukan -->
+			<hr />
+			<p>No results found.</p>
+			<hr />
+
+			<?php elseif(empty($data_search)): ?>
+		<!-- Jika kolom search tidak terisi, maka.. -->
+		<hr />
+		
+		<?php for($i=0; $i<count($data); $i++) { ?>
+			<!-- Looping Pengambilan Data Buku -->
+			<div class="span3 center">
+				<p><img src="<?=($data[$i][10])?>" class="img-polaroid" style="width:200px; height:200px;"></p>
+				<p class="title"><?=$data[$i][1]?></p>
+				<p class="title title-small">( <?=$data[$i][3]?> )</p>
+				<p>
+					<a href="#modalDetail<?=$i?>" role="button" class="btn btn- btn-inverse btn-small" data-toggle="modal">
+						<i class="icon-zoom-in icon-white"></i> Detail
+					</a>
+				</p>
+			</div>
+		<?php } ?>
+		</div>
+		<hr />
+
+	
+	<?php endif; ?>
+
 <?php	
 	//PAGINATION
 	$db=new MySQL();
